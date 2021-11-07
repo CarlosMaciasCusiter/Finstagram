@@ -5,8 +5,6 @@ import { User } from './users.model';
 
 @Injectable()
 export class UsersService {
-  private users: User[] = [];
-
   constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
   async insertUser(
@@ -15,7 +13,12 @@ export class UsersService {
     imageURL: string,
     password: string,
   ) {
-    const newUser = new this.userModel({ username, bio, imageURL, password });
+    const newUser = new this.userModel({
+      username: username,
+      bio: bio,
+      imageURL: imageURL,
+      password: password,
+    });
     const result = await newUser.save();
     return result.id as string;
   }
