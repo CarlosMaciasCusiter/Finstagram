@@ -14,13 +14,13 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  addUser(
+  async addUser(
     @Body('username') userUsername: string,
     @Body('bio') userBio: string,
     @Body('imageURL') userImage: string,
     @Body('password') userPassword: string,
   ) {
-    const generatedID = this.usersService.insertUser(
+    const generatedID = await this.usersService.insertUser(
       userUsername,
       userBio,
       userImage,
@@ -30,8 +30,9 @@ export class UsersController {
   }
 
   @Get()
-  getAllUsers() {
-    return this.usersService.getUsers();
+  async getAllUsers() {
+    const users = await this.usersService.getUsers();
+    return users;
   }
 
   @Get(':id')
@@ -40,14 +41,14 @@ export class UsersController {
   }
 
   @Patch(':id')
-  updateUser(
+  async updateUser(
     @Param('id') userID: string,
     @Body('username') userUsername: string,
     @Body('bio') userBio: string,
     @Body('imageURL') userImage: string,
     @Body('password') userPassword: string,
   ) {
-    this.usersService.updateUser(
+    await this.usersService.updateUser(
       userID,
       userUsername,
       userBio,
@@ -58,8 +59,8 @@ export class UsersController {
   }
 
   @Delete(':id')
-  removeUser(@Param('id') userID: string) {
-    this.usersService.deleteUser(userID);
+  async removeUser(@Param('id') userID: string) {
+    await this.usersService.deleteUser(userID);
     return null;
   }
 }

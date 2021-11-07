@@ -1,50 +1,68 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { stringify } from 'querystring';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { User } from './users.model';
 
 @Injectable()
 export class UsersService {
   private users: User[] = [];
 
-  private findUser(id: string): [User, number] {
-    const userIndex = this.users.findIndex((user) => user.id === id);
-    const user = this.users[userIndex];
-    if (!user) {
-      throw new NotFoundException('User could not be found!');
-    }
-    return [user, userIndex];
-  }
+  constructor(@InjectModel('User') private readonly userModel: Model<User>) {}
 
-  insertUser(
+  async insertUser(
     username: string,
     bio: string,
     imageURL: string,
     password: string,
   ) {
-    const userID = Math.random().toString();
-    const newUser = new User(userID, username, bio, imageURL, password);
-    this.users.push(newUser);
-    return userID;
+    const newUser = new this.userModel({ username, bio, imageURL, password });
+    const result = await newUser.save();
+    return result.id as string;
   }
 
-  getUsers() {
-    return [...this.users];
+  private async findUser(id: string): Promise<User> {
+    let user;
+    try {
+      user = await this.userModel.findById(id).exec();
+    } catch (error) {
+      throw new NotFoundException('Could not find user.');
+    }
+    if (!user) {
+      throw new NotFoundException('User could not be found!');
+    }
+    return user;
   }
 
-  getSingleUser(userID: string) {
-    const user = this.findUser(userID)[0];
-    return { ...user };
+  async getUsers() {
+    const users = await this.userModel.find().exec();
+    return users.map((user) => ({
+      id: user.id,
+      username: user.username,
+      bio: user.bio,
+      imageURL: user.imageURL,
+      password: user.password,
+    }));
   }
 
-  updateUser(
+  async getSingleUser(userID: string) {
+    const user = await this.findUser(userID);
+    return {
+      id: user.id,
+      username: user.username,
+      bio: user.bio,
+      imageURL: user.imageURL,
+      password: user.password,
+    };
+  }
+
+  async updateUser(
     userID: string,
     username: string,
     bio: string,
     imageURL: string,
     password: string,
   ) {
-    const [user, index] = this.findUser(userID);
-    const updatedUser = { ...user };
+    const updatedUser = await this.findUser(userID);
     if (username) {
       updatedUser.username = username;
     }
@@ -57,11 +75,13 @@ export class UsersService {
     if (password) {
       updatedUser.password = password;
     }
-    this.users[index] = updatedUser;
+    updatedUser.save();
   }
 
-  deleteUser(userID: string) {
-    const index = this.findUser(userID)[1];
-    this.users.splice(index, 1);
+  async deleteUser(userID: string) {
+    const result = await this.userModel.deleteOne({ _id: userID }).exec();
+    if (result.deletedCount !== 1) {
+      throw new NotFoundException('User was not found');
+    }
   }
 }
